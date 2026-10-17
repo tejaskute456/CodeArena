@@ -1,0 +1,1070 @@
+OCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CodeArena - Platform Prototype</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['Fira Code', 'monospace'],
+                    },
+                    colors: {
+                        brand: {
+                            green: '#10b981', // emerald-500
+                            dark: '#0f172a',  // slate-900
+                            light: '#f8fafc', // slate-50
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #ffffff;
+            color: #334155;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+        }
+
+        .view-section {
+            display: none;
+            animation: fadeIn 0.3s ease-in-out forwards;
+        }
+
+        .view-section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Code Editor Styling */
+        .editor-container {
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            font-family: 'Fira Code', monospace;
+            border-radius: 0.5rem;
+            overflow: hidden;
+            display: flex;
+        }
+        
+        .line-numbers {
+            padding: 1rem 0.5rem;
+            background-color: #252526;
+            color: #858585;
+            text-align: right;
+            user-select: none;
+            border-right: 1px solid #404040;
+            min-width: 2.5rem;
+        }
+
+        .code-textarea {
+            background-color: transparent;
+            color: #d4d4d4;
+            padding: 1rem;
+            border: none;
+            outline: none;
+            resize: none;
+            width: 100%;
+            height: 300px;
+            font-family: inherit;
+            font-size: 14px;
+            line-height: 1.5;
+            white-space: pre;
+            overflow-wrap: normal;
+            overflow-x: auto;
+        }
+
+        /* Mock loader */
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #10b981;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Custom Scrollbar for editor */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; 
+        }
+    </style>
+</head>
+<body class="bg-white min-h-screen flex flex-col">
+
+    <nav id="main-nav" class="bg-white border-b border-gray-200 sticky top-0 z-50 hidden">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center gap-2 cursor-pointer" onclick="navigate('dashboard')">
+                    <div class="bg-brand-green text-white p-2 rounded-lg text-sm">
+                        <i class="fas fa-code"></i>
+                    </div>
+                    <span class="font-bold text-xl text-brand-dark tracking-tight">CodeArena</span>
+                </div>
+                
+                <div class="hidden md:flex items-center space-x-8">
+                    <button onclick="navigate('dashboard')" class="nav-btn text-gray-600 hover:text-brand-green font-medium transition-colors" data-target="dashboard">Dashboard</button>
+                    <button onclick="navigate('problems')" class="nav-btn text-gray-600 hover:text-brand-green font-medium transition-colors" data-target="problems">Problems & Quizzes</button>
+                    <button onclick="navigate('contests')" class="nav-btn text-gray-600 hover:text-brand-green font-medium transition-colors" data-target="contests">Contests</button>
+                    <button onclick="navigate('leaderboard')" class="nav-btn text-gray-600 hover:text-brand-green font-medium transition-colors" data-target="leaderboard">Leaderboard</button>
+                </div>
+
+                <div class="flex items-center gap-4">
+                    <div class="hidden md:flex items-center gap-2 text-sm font-medium text-gray-700 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-200">
+                        <i class="fas fa-user-circle text-brand-green text-lg"></i>
+                        <span id="nav-username">Student</span>
+                    </div>
+                    <button onclick="logout()" class="text-sm text-red-500 hover:text-red-700 font-medium">Logout</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        <section id="view-login" class="view-section active">
+            <div class="flex flex-col items-center justify-center min-h-[80vh]">
+                <div class="w-full max-w-md bg-white p-8 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-gray-100 text-center">
+                    <div class="bg-brand-green text-white p-4 rounded-xl inline-block mb-4 shadow-lg shadow-emerald-200">
+                        <i class="fas fa-code text-3xl"></i>
+                    </div>
+                    <h1 class="text-2xl font-bold text-gray-900 mb-2">Welcome to CodeArena</h1>
+                    <p class="text-gray-500 mb-8 text-sm">College Coding Contest & Practice Platform</p>
+                    
+                    <form id="login-form" onsubmit="handleLogin(event)" class="space-y-4">
+                        <div class="text-left">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Enter your Name or Roll No.</label>
+                            <input type="text" id="login-name" required placeholder="e.g. John Doe or I149" class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-brand-green focus:border-brand-green transition-all outline-none">
+                        </div>
+                        <button type="submit" class="w-full bg-brand-green hover:bg-emerald-600 text-white font-bold py-3 px-4 rounded-lg transition-colors shadow-md">
+                            Enter Platform <i class="fas fa-arrow-right ml-2"></i>
+                        </button>
+                    </form>
+                    
+                    <div class="mt-6 p-4 bg-blue-50 text-blue-700 text-xs rounded-lg text-left flex gap-3 items-start">
+                        <i class="fas fa-info-circle mt-0.5"></i>
+                        <p>This is a frontend prototype. No backend is required. Any name entered will create a local session to demonstrate functionality.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="view-dashboard" class="view-section">
+            <div class="mb-8">
+                <h2 class="text-3xl font-bold text-gray-900">Dashboard</h2>
+                <p class="text-gray-500 mt-1">Welcome back, <span id="dash-username" class="font-semibold text-brand-green">Student</span>! Here's your overview.</p>
+            </div>
+
+            <!-- Stats Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+                <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex items-center gap-4">
+                    <div class="bg-emerald-100 text-brand-green w-12 h-12 rounded-full flex items-center justify-center text-xl">
+                        <i class="fas fa-check-double"></i>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500 font-medium">Problems Solved</p>
+                        <p class="text-2xl font-bold text-gray-900" id="stat-solved">0</p>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex items-center gap-4">
+                    <div class="bg-blue-100 text-blue-600 w-12 h-12 rounded-full flex items-center justify-center text-xl">
+                        <i class="fas fa-trophy"></i>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500 font-medium">Current Rating</p>
+                        <p class="text-2xl font-bold text-gray-900">1200</p>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex items-center gap-4">
+                    <div class="bg-orange-100 text-orange-600 w-12 h-12 rounded-full flex items-center justify-center text-xl">
+                        <i class="fas fa-fire"></i>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500 font-medium">Active Streak</p>
+                        <p class="text-2xl font-bold text-gray-900">3 Days</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Recommended Problems -->
+                <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-bold text-lg text-gray-900">Recommended Practice</h3>
+                        <button onclick="navigate('problems')" class="text-brand-green text-sm font-medium hover:underline">View All</button>
+                    </div>
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center p-3 hover:bg-gray-50 rounded-lg border border-gray-100 transition-colors">
+                            <div class="flex items-center gap-3">
+                                <span class="bg-green-100 text-green-700 text-xs px-2 py-1 rounded font-bold">Easy</span>
+                                <span class="font-medium text-gray-800">Two Sum</span>
+                            </div>
+                            <button onclick="openEditor(1)" class="text-gray-500 hover:text-brand-green bg-white border border-gray-200 px-3 py-1 rounded text-sm transition-colors">Solve</button>
+                        </div>
+                        <div class="flex justify-between items-center p-3 hover:bg-gray-50 rounded-lg border border-gray-100 transition-colors">
+                            <div class="flex items-center gap-3">
+                                <span class="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded font-bold">Quiz</span>
+                                <span class="font-medium text-gray-800">Data Structures 101</span>
+                            </div>
+                            <button onclick="openQuiz(1)" class="text-gray-500 hover:text-brand-green bg-white border border-gray-200 px-3 py-1 rounded text-sm transition-colors">Attempt</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Upcoming Contests -->
+                <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-bold text-lg text-gray-900">Upcoming Contests</h3>
+                        <button onclick="navigate('contests')" class="text-brand-green text-sm font-medium hover:underline">View All</button>
+                    </div>
+                    <div class="border border-brand-green bg-emerald-50 rounded-lg p-4 relative overflow-hidden">
+                        <div class="absolute top-0 right-0 bg-brand-green text-white text-xs px-2 py-1 rounded-bl-lg font-bold">Registration Open</div>
+                        <h4 class="font-bold text-brand-dark mb-1">Weekly College Sprint #42</h4>
+                        <p class="text-sm text-gray-600 mb-3"><i class="far fa-clock mr-1"></i> Starts in: 2 days, 4 hours</p>
+                        <button class="w-full bg-brand-green text-white font-medium py-2 rounded-lg hover:bg-emerald-600 transition-colors">Register Now</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="view-problems" class="view-section">
+            <div class="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-3xl font-bold text-gray-900">Problems & Quizzes</h2>
+                    <p class="text-gray-500 mt-1">Practice coding challenges and test your conceptual knowledge.</p>
+                </div>
+                <div class="flex gap-2">
+                    <input type="text" placeholder="Search..." class="px-4 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:border-brand-green">
+                    <select class="px-4 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:border-brand-green bg-white">
+                        <option>All Difficulties</option>
+                        <option>Easy</option>
+                        <option>Medium</option>
+                        <option>Hard</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-gray-50 border-b border-gray-200 text-gray-500 text-sm">
+                            <th class="py-3 px-4 font-medium">Status</th>
+                            <th class="py-3 px-4 font-medium">Title</th>
+                            <th class="py-3 px-4 font-medium">Type</th>
+                            <th class="py-3 px-4 font-medium">Difficulty</th>
+                            <th class="py-3 px-4 font-medium text-right">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="problems-tbody" class="divide-y divide-gray-200">
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="view-editor" class="view-section">
+            <div class="mb-4 flex items-center justify-between">
+                <button onclick="navigate('problems')" class="text-gray-500 hover:text-brand-dark transition-colors text-sm font-medium">
+                    <i class="fas fa-arrow-left mr-1"></i> Back to Problems
+                </button>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+                <!-- Problem Description -->
+                <div class="lg:col-span-2 bg-white rounded-xl border border-gray-200 p-6 shadow-sm flex flex-col h-[700px] overflow-y-auto">
+                    <div class="flex items-center gap-3 mb-4">
+                        <span id="editor-difficulty" class="bg-green-100 text-green-700 text-xs px-2 py-1 rounded font-bold">Easy</span>
+                        <h2 id="editor-title" class="text-2xl font-bold text-gray-900">Two Sum</h2>
+                    </div>
+                    <div class="prose prose-sm text-gray-600 flex-grow" id="editor-description">
+                        <!-- Description populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Editor Workspace -->
+                <div class="lg:col-span-3 flex flex-col gap-4 h-[700px]">
+                    
+                    <div class="bg-white border border-gray-200 rounded-xl p-2 flex justify-between items-center shadow-sm">
+                        <select class="px-3 py-1.5 bg-gray-50 border border-gray-300 rounded text-sm font-medium outline-none">
+                            <option>JavaScript (Node.js)</option>
+                            <option>Python 3</option>
+                            <option>C++</option>
+                            <option>Java</option>
+                        </select>
+                        <div class="flex gap-2">
+                            <button class="px-4 py-1.5 border border-gray-300 text-gray-700 rounded text-sm font-medium hover:bg-gray-50 transition-colors">Run Code</button>
+                            <button onclick="submitCode()" class="px-4 py-1.5 bg-brand-green text-white rounded text-sm font-bold hover:bg-emerald-600 transition-colors shadow-sm flex items-center gap-2">
+                                <i class="fas fa-paper-plane"></i> Submit
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="editor-container flex-grow shadow-sm">
+                        <div class="line-numbers flex flex-col font-mono text-sm">
+                            <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span>10</span>
+                        </div>
+                        <textarea id="code-textarea" class="code-textarea" spellcheck="false"></textarea>
+                    </div>
+
+                    <!-- Evaluation Verdict Box -->
+                    <div id="verdict-box" class="bg-white rounded-xl border border-gray-200 p-4 shadow-sm min-h-[100px] hidden flex-col justify-center">
+                        <!-- Verdict Content Populated by JS -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="view-quiz" class="view-section">
+            <div class="mb-4 flex items-center justify-between">
+                <button onclick="navigate('problems')" class="text-gray-500 hover:text-brand-dark transition-colors text-sm font-medium">
+                    <i class="fas fa-arrow-left mr-1"></i> Back to Quizzes
+                </button>
+            </div>
+
+            <div class="max-w-3xl mx-auto bg-white rounded-xl border border-gray-200 p-8 shadow-sm relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
+                
+                <div class="flex justify-between items-start mb-6 border-b border-gray-100 pb-4">
+                    <div>
+                        <span class="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded font-bold mb-2 inline-block">Quiz / Multiple Choice</span>
+                        <h2 id="quiz-title" class="text-2xl font-bold text-gray-900">Quiz Title</h2>
+                    </div>
+                    <span class="text-gray-400 font-medium text-sm">Points: 10</span>
+                </div>
+
+                <div class="mb-8">
+                    <p id="quiz-question" class="text-lg text-gray-800 font-medium mb-6">Question goes here?</p>
+                    <div id="quiz-options" class="space-y-3">
+                        <!-- Options populated by JS -->
+                    </div>
+                </div>
+
+                <div class="flex justify-between items-center">
+                    <div id="quiz-feedback" class="font-bold text-sm hidden"></div>
+                    <button onclick="submitQuiz()" id="quiz-submit-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg transition-colors ml-auto">
+                        Submit Answer
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <section id="view-contests" class="view-section">
+            <div class="mb-8">
+                <h2 class="text-3xl font-bold text-gray-900">Contests</h2>
+                <p class="text-gray-500 mt-1">Compete against peers in real-time coding events.</p>
+            </div>
+
+            <div class="space-y-6">
+                <!-- Active Contest -->
+                <div class="bg-white rounded-xl border border-emerald-200 shadow-[0_4px_20px_rgb(16,185,129,0.1)] overflow-hidden flex flex-col md:flex-row relative">
+                    <div class="absolute top-4 right-4 flex items-center gap-1.5 text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded">
+                        <span class="relative flex h-2 w-2">
+                          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                          <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                        </span>
+                        LIVE NOW
+                    </div>
+                    <div class="bg-brand-green md:w-48 p-6 flex flex-col items-center justify-center text-white">
+                        <i class="fas fa-trophy text-4xl mb-2"></i>
+                        <span class="font-bold text-center">College Cup<br>Round 1</span>
+                    </div>
+                    <div class="p-6 flex-grow flex flex-col justify-between">
+                        <div>
+                            <h3 class="text-xl font-bold text-gray-900 mb-2">Algorithm Challenge 2026</h3>
+                            <p class="text-gray-600 text-sm max-w-xl">10 Problems • 15 Minutes. Test your skills in dynamic programming and graph theory.</p>
+                        </div>
+                        <div class="mt-6 flex flex-wrap gap-4 items-center justify-between">
+                            <div class="text-sm font-medium text-gray-500">
+                                <i class="fas fa-users mr-1"></i> 142 Participants
+                            </div>
+                            <button onclick="startContest()" class="bg-brand-dark text-white px-6 py-2 rounded-lg text-sm font-bold hover:bg-gray-800 transition-colors">Enter Contest</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Upcoming -->
+                <h3 class="text-xl font-bold text-gray-900 mt-10 mb-4">Upcoming</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <h4 class="font-bold text-gray-900">Weekly Sprint #42</h4>
+                                <p class="text-xs text-gray-500 mt-1">Starts Oct 15, 2:00 PM</p>
+                            </div>
+                            <span class="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded font-bold">Unregistered</span>
+                        </div>
+                        <button class="w-full border border-brand-green text-brand-green font-medium py-2 rounded-lg hover:bg-emerald-50 transition-colors text-sm">Register</button>
+                    </div>
+                    
+                    <div class="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <h4 class="font-bold text-gray-900">Freshman Coding Bee</h4>
+                                <p class="text-xs text-gray-500 mt-1">Starts Oct 20, 10:00 AM</p>
+                            </div>
+                            <span class="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded font-bold">Unregistered</span>
+                        </div>
+                        <button class="w-full border border-brand-green text-brand-green font-medium py-2 rounded-lg hover:bg-emerald-50 transition-colors text-sm">Register</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="view-leaderboard" class="view-section">
+            <div class="mb-8 text-center max-w-2xl mx-auto">
+                <div class="inline-block bg-orange-100 text-orange-600 p-3 rounded-full mb-4">
+                    <i class="fas fa-chart-simple text-2xl"></i>
+                </div>
+                <h2 class="text-3xl font-bold text-gray-900">Global Rankings</h2>
+                <p class="text-gray-500 mt-2">See how you stack up against other students on the platform based on contest ratings and problem solving.</p>
+            </div>
+
+            <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden max-w-4xl mx-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-gray-50 border-b border-gray-200 text-gray-500 text-sm">
+                            <th class="py-4 px-6 font-medium w-16 text-center">Rank</th>
+                            <th class="py-4 px-6 font-medium">Student</th>
+                            <th class="py-4 px-6 font-medium text-center">Solved</th>
+                            <th class="py-4 px-6 font-medium text-right">Rating</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        <!-- Top 1 -->
+                        <tr class="bg-yellow-50/30">
+                            <td class="py-4 px-6 text-center">
+                                <i class="fas fa-medal text-yellow-500 text-xl"></i>
+                            </td>
+                            <td class="py-4 px-6">
+                                <div class="font-bold text-gray-900">Sambhav T.</div>
+                                <div class="text-xs text-gray-500">I149</div>
+                            </td>
+                            <td class="py-4 px-6 text-center font-medium text-gray-700">142</td>
+                            <td class="py-4 px-6 text-right font-bold text-brand-green">2150</td>
+                        </tr>
+                        <!-- Top 2 -->
+                        <tr class="bg-gray-50/50">
+                            <td class="py-4 px-6 text-center">
+                                <i class="fas fa-medal text-gray-400 text-xl"></i>
+                            </td>
+                            <td class="py-4 px-6">
+                                <div class="font-bold text-gray-900">Tejas K.</div>
+                                <div class="text-xs text-gray-500">I169</div>
+                            </td>
+                            <td class="py-4 px-6 text-center font-medium text-gray-700">138</td>
+                            <td class="py-4 px-6 text-right font-bold text-brand-green">2100</td>
+                        </tr>
+                        <!-- Top 3 -->
+                        <tr class="bg-orange-50/30">
+                            <td class="py-4 px-6 text-center">
+                                <i class="fas fa-medal text-orange-600 text-xl"></i>
+                            </td>
+                            <td class="py-4 px-6">
+                                <div class="font-bold text-gray-900">Alex M.</div>
+                                <div class="text-xs text-gray-500">CS202</div>
+                            </td>
+                            <td class="py-4 px-6 text-center font-medium text-gray-700">95</td>
+                            <td class="py-4 px-6 text-right font-bold text-brand-green">1850</td>
+                        </tr>
+                        <!-- User Row (Dynamic based on login) -->
+                        <tr class="border-t-2 border-brand-green bg-emerald-50/30" id="leaderboard-user-row">
+                            <td class="py-4 px-6 text-center font-bold text-gray-600">42</td>
+                            <td class="py-4 px-6">
+                                <div class="font-bold text-gray-900" id="lb-username">Student</div>
+                                <div class="text-xs text-brand-green font-medium">You</div>
+                            </td>
+                            <td class="py-4 px-6 text-center font-medium text-gray-700" id="lb-solved">0</td>
+                            <td class="py-4 px-6 text-right font-bold text-gray-900" id="lb-rating">1200</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="view-active-contest" class="view-section">
+            <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col h-[800px] max-h-[85vh]">
+                <!-- Contest Header -->
+                <div class="bg-brand-dark text-white p-4 flex justify-between items-center sticky top-0 z-10">
+                    <div>
+                        <h2 class="text-xl font-bold">Algorithm Challenge 2026</h2>
+                        <p class="text-gray-400 text-xs mt-1">Round 1 - Multiple Choice Format</p>
+                    </div>
+                    <div class="flex items-center gap-6">
+                        <div class="flex items-center gap-2 bg-gray-800 px-4 py-2 rounded-lg border border-gray-700 text-xl font-mono font-bold">
+                            <i class="far fa-clock text-brand-green"></i>
+                            <span id="contest-timer" class="text-white">15:00</span>
+                        </div>
+                        <button onclick="submitContest()" class="bg-brand-green hover:bg-emerald-600 text-white font-bold py-2 px-6 rounded-lg transition-colors">
+                            Submit Contest
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Contest Body -->
+                <div class="flex flex-col md:flex-row flex-grow overflow-hidden">
+                    <!-- Left Sidebar: Question Navigation -->
+                    <div class="w-full md:w-64 bg-gray-50 border-r border-gray-200 p-4 overflow-y-auto">
+                        <h3 class="font-bold text-gray-700 mb-4 text-sm uppercase tracking-wider">Questions</h3>
+                        <div class="grid grid-cols-5 md:grid-cols-4 gap-2" id="contest-nav-grid">
+                            <!-- Nav buttons populated by JS -->
+                        </div>
+                        
+                        <div class="mt-8 space-y-2 text-xs text-gray-500">
+                            <div class="flex items-center gap-2"><div class="w-3 h-3 bg-brand-green rounded-full"></div> Answered</div>
+                            <div class="flex items-center gap-2"><div class="w-3 h-3 bg-white border border-gray-300 rounded-full"></div> Unanswered</div>
+                            <div class="flex items-center gap-2"><div class="w-3 h-3 bg-blue-500 rounded-full"></div> Current</div>
+                        </div>
+                    </div>
+
+                    <!-- Right Main Area: Question Display -->
+                    <div class="flex-grow p-6 md:p-10 overflow-y-auto bg-white flex flex-col">
+                        <div class="flex justify-between items-center mb-6">
+                            <span class="bg-blue-100 text-blue-700 text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wide" id="contest-q-badge">Question 1 of 10</span>
+                            <span class="text-gray-400 font-medium text-sm">Points: 10</span>
+                        </div>
+                        
+                        <div class="mb-10">
+                            <h2 id="contest-q-text" class="text-2xl text-gray-900 font-medium mb-8 leading-relaxed">Loading question...</h2>
+                            <div id="contest-q-options" class="space-y-4">
+                                <!-- Options populated by JS -->
+                            </div>
+                        </div>
+
+                        <!-- Prev/Next Controls -->
+                        <div class="mt-auto pt-6 border-t border-gray-100 flex justify-between">
+                            <button id="btn-contest-prev" onclick="changeContestQuestion(-1)" class="px-6 py-2 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                                <i class="fas fa-arrow-left mr-2"></i> Previous
+                            </button>
+                            <button id="btn-contest-next" onclick="changeContestQuestion(1)" class="px-6 py-2 bg-blue-50 text-blue-700 font-bold border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                                Next <i class="fas fa-arrow-right ml-2"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="view-contest-result" class="view-section">
+            <div class="max-w-2xl mx-auto bg-white rounded-2xl border border-gray-200 shadow-xl overflow-hidden text-center p-10">
+                <div class="w-24 h-24 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <i class="fas fa-trophy text-5xl text-brand-green"></i>
+                </div>
+                <h2 class="text-3xl font-bold text-gray-900 mb-2">Contest Submitted!</h2>
+                <p class="text-gray-500 mb-8">Algorithm Challenge 2026 has been successfully completed.</p>
+                
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
+                    <div class="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                        <div class="text-gray-500 text-sm font-medium mb-1">Score</div>
+                        <div class="text-2xl font-bold text-gray-900" id="result-score">0/100</div>
+                    </div>
+                    <div class="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                        <div class="text-gray-500 text-sm font-medium mb-1">Accuracy</div>
+                        <div class="text-2xl font-bold text-gray-900" id="result-accuracy">0%</div>
+                    </div>
+                    <div class="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                        <div class="text-gray-500 text-sm font-medium mb-1">Time Taken</div>
+                        <div class="text-2xl font-bold text-gray-900" id="result-time">00:00</div>
+                    </div>
+                    <div class="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                        <div class="text-gray-500 text-sm font-medium mb-1">Rating Change</div>
+                        <div class="text-2xl font-bold text-green-600">+45 <i class="fas fa-caret-up"></i></div>
+                    </div>
+                </div>
+                
+                <button onclick="returnFromContest()" class="bg-brand-dark text-white font-bold py-3 px-8 rounded-lg hover:bg-gray-800 transition-colors">
+                    Return to Dashboard
+                </button>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        // --- State Management ---
+        let currentUser = localStorage.getItem('codearena_user');
+        let solvedCount = parseInt(localStorage.getItem('codearena_solved')) || 0;
+        let currentProblemId = null;
+        let currentQuizId = null;
+
+        // --- Contest State ---
+        let currentContestQ = 0;
+        let contestTimerInterval = null;
+        let contestRemainingSeconds = 15 * 60; // 15 minutes
+        let userContestAnswers = new Array(10).fill(null);
+        
+        const contestQuestions = [
+            { q: "What is the worst-case time complexity of Quick Sort?", options: ["O(n log n)", "O(n)", "O(n^2)", "O(log n)"], answer: 2 },
+            { q: "Which data structure is typically used to implement Breadth-First Search (BFS)?", options: ["Stack", "Queue", "Priority Queue", "Linked List"], answer: 1 },
+            { q: "What is the time complexity of searching for an element in a balanced Binary Search Tree (BST)?", options: ["O(1)", "O(n)", "O(log n)", "O(n^2)"], answer: 2 },
+            { q: "Which of the following sorting algorithms is considered 'stable' by default?", options: ["Merge Sort", "Heap Sort", "Quick Sort", "Selection Sort"], answer: 0 },
+            { q: "In a graph, Dijkstra's algorithm is used to find:", options: ["Minimum Spanning Tree", "Topological Sort", "Shortest Path", "Strongly Connected Components"], answer: 2 },
+            { q: "What is the space complexity of Depth-First Search (DFS) on a tree of height h?", options: ["O(1)", "O(h)", "O(n)", "O(n^2)"], answer: 1 },
+            { q: "Which tree traversal strategy visits the root node last?", options: ["Pre-order", "In-order", "Post-order", "Level-order"], answer: 2 },
+            { q: "What is the best data structure combination to implement an LRU (Least Recently Used) Cache?", options: ["Array and Stack", "Hash Map and Doubly Linked List", "Binary Search Tree and Queue", "Heap and Hash Set"], answer: 1 },
+            { q: "What is the time complexity to insert a new element into a Max Heap of size n?", options: ["O(1)", "O(log n)", "O(n)", "O(n log n)"], answer: 1 },
+            { q: "Dynamic Programming optimization is strictly applicable when a problem exhibits which property?", options: ["Greedy Choice Property", "Overlapping Subproblems and Optimal Substructure", "Randomized Partitions", "NP-Completeness"], answer: 1 }
+        ];
+
+        // Mock Database for Problems and Quizzes
+        const platformData = [
+            {
+                id: 1,
+                title: "Two Sum",
+                type: "code",
+                difficulty: "Easy",
+                description: `
+                    <p>Given an array of integers <code>nums</code> and an integer <code>target</code>, return indices of the two numbers such that they add up to <code>target</code>.</p>
+                    <p>You may assume that each input would have <strong>exactly one solution</strong>, and you may not use the same element twice.</p>
+                    <br>
+                    <strong>Example:</strong>
+                    <pre class="bg-gray-100 p-3 rounded mt-2 text-xs font-mono border border-gray-200 text-gray-800">
+Input: nums = [2,7,11,15], target = 9
+Output: [0,1]
+Explanation: Because nums[0] + nums[1] == 9, we return [0, 1].</pre>
+                `,
+                defaultCode: "function twoSum(nums, target) {\n    // Write your code here\n    \n    \n};",
+                solved: false
+            },
+            {
+                id: 2,
+                title: "Data Structures 101",
+                type: "quiz",
+                difficulty: "Easy",
+                question: "What is the time complexity of searching for an element in a balanced Binary Search Tree (BST)?",
+                options: ["O(1)", "O(n)", "O(log n)", "O(n^2)"],
+                correctIndex: 2,
+                solved: false
+            },
+            {
+                id: 3,
+                title: "Valid Palindrome",
+                type: "code",
+                difficulty: "Easy",
+                description: "<p>A phrase is a palindrome if, after converting all uppercase letters into lowercase letters and removing all non-alphanumeric characters, it reads the same forward and backward.</p><p>Given a string <code>s</code>, return <code>true</code> if it is a palindrome, or <code>false</code> otherwise.</p>",
+                defaultCode: "function isPalindrome(s) {\n    \n};",
+                solved: false
+            },
+            {
+                id: 4,
+                title: "Merge Intervals",
+                type: "code",
+                difficulty: "Medium",
+                description: "<p>Given an array of <code>intervals</code> where <code>intervals[i] = [starti, endi]</code>, merge all overlapping intervals, and return an array of the non-overlapping intervals that cover all the intervals in the input.</p>",
+                defaultCode: "function merge(intervals) {\n    \n};",
+                solved: false
+            },
+            {
+                id: 5,
+                title: "Sorting Algorithms",
+                type: "quiz",
+                difficulty: "Medium",
+                question: "Which of the following sorting algorithms has the best worst-case time complexity?",
+                options: ["Quick Sort", "Merge Sort", "Bubble Sort", "Insertion Sort"],
+                correctIndex: 1,
+                solved: false
+            }
+        ];
+
+        // --- Core Functions ---
+
+        // Handle Login
+        function handleLogin(event) {
+            event.preventDefault();
+            const nameInput = document.getElementById('login-name').value.trim();
+            if(nameInput) {
+                currentUser = nameInput;
+                localStorage.setItem('codearena_user', currentUser);
+                
+                document.getElementById('nav-username').innerText = currentUser;
+                document.getElementById('dash-username').innerText = currentUser;
+                document.getElementById('lb-username').innerText = currentUser;
+                
+                // Show nav and go to dashboard
+                document.getElementById('main-nav').classList.remove('hidden');
+                renderProblemsTable();
+                navigate('dashboard');
+            }
+        }
+
+        function logout() {
+            currentUser = null;
+            localStorage.removeItem('codearena_user');
+            
+            document.getElementById('main-nav').classList.add('hidden');
+            document.getElementById('login-name').value = '';
+            navigate('login');
+        }
+
+        // Navigation Router
+        function navigate(viewId) {
+            // Hide all views
+            document.querySelectorAll('.view-section').forEach(el => {
+                el.classList.remove('active');
+            });
+            
+            // Update Nav styling
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('text-brand-green', 'border-b-2', 'border-brand-green');
+                if(btn.getAttribute('data-target') === viewId) {
+                    btn.classList.add('text-brand-green', 'border-b-2', 'border-brand-green', 'pb-[19px]'); // Align border with bottom
+                }
+            });
+
+            // Show selected view
+            document.getElementById(`view-${viewId}`).classList.add('active');
+            
+            // Scroll to top
+            window.scrollTo(0,0);
+        }
+
+        // Render Problems Table
+        function renderProblemsTable() {
+            const tbody = document.getElementById('problems-tbody');
+            tbody.innerHTML = '';
+            
+            platformData.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-gray-50 transition-colors";
+                
+                // Status Icon
+                const statusHtml = item.solved ? 
+                    `<i class="fas fa-check-circle text-brand-green text-lg"></i>` : 
+                    `<i class="far fa-circle text-gray-300 text-lg"></i>`;
+                
+                // Type Badge
+                const typeBadge = item.type === 'code' ? 
+                    `<span class="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded font-bold uppercase"><i class="fas fa-code mr-1"></i> Code</span>` : 
+                    `<span class="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded font-bold uppercase"><i class="fas fa-question-circle mr-1"></i> Quiz</span>`;
+                
+                // Difficulty Color
+                let diffColor = "text-green-700 bg-green-100";
+                if(item.difficulty === 'Medium') diffColor = "text-yellow-700 bg-yellow-100";
+                if(item.difficulty === 'Hard') diffColor = "text-red-700 bg-red-100";
+
+                tr.innerHTML = `
+                    <td class="py-3 px-4">${statusHtml}</td>
+                    <td class="py-3 px-4 font-bold text-gray-900">${item.title}</td>
+                    <td class="py-3 px-4">${typeBadge}</td>
+                    <td class="py-3 px-4"><span class="${diffColor} text-xs px-2 py-1 rounded font-bold">${item.difficulty}</span></td>
+                    <td class="py-3 px-4 text-right">
+                        <button onclick="${item.type === 'code' ? `openEditor(${item.id})` : `openQuiz(${item.id})`}" class="text-sm font-medium text-brand-green hover:text-emerald-700 border border-brand-green px-3 py-1 rounded hover:bg-emerald-50 transition-colors">
+                            ${item.type === 'code' ? 'Solve' : 'Attempt'}
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+            
+            // Update stats
+            document.getElementById('stat-solved').innerText = solvedCount;
+            document.getElementById('lb-solved').innerText = solvedCount;
+        }
+
+        // --- Editor Logic ---
+        function openEditor(id) {
+            const problem = platformData.find(p => p.id === id);
+            if(!problem) return;
+            
+            currentProblemId = id;
+            document.getElementById('editor-title').innerText = problem.title;
+            document.getElementById('editor-description').innerHTML = problem.description;
+            document.getElementById('code-textarea').value = problem.defaultCode;
+            
+            // Reset verdict box
+            const box = document.getElementById('verdict-box');
+            box.classList.add('hidden');
+            box.innerHTML = '';
+            
+            navigate('editor');
+        }
+
+        // Simulate PPT Verdict evaluation
+        function submitCode() {
+            const box = document.getElementById('verdict-box');
+            box.classList.remove('hidden');
+            box.className = "bg-white rounded-xl border border-gray-200 p-6 shadow-sm mt-4 flex flex-col justify-center items-center text-center animation-pulse";
+            
+            // Show Loader
+            box.innerHTML = `
+                <div class="loader mb-3"></div>
+                <h3 class="font-bold text-gray-700">Evaluating Submission...</h3>
+                <p class="text-xs text-gray-500 mt-1">Running against test cases</p>
+            `;
+
+            // Mock network delay & evaluation
+            setTimeout(() => {
+                const problem = platformData.find(p => p.id === currentProblemId);
+                if(!problem.solved) {
+                    problem.solved = true;
+                    solvedCount++;
+                    localStorage.setItem('codearena_solved', solvedCount);
+                }
+
+                // Success UI (Matches PPT graphic concept)
+                box.className = "bg-emerald-50 rounded-xl border border-emerald-200 p-6 shadow-sm mt-4 flex flex-col justify-center items-center text-center";
+                box.innerHTML = `
+                    <div class="w-16 h-16 bg-white rounded-full flex items-center justify-center border-4 border-brand-green mb-3 shadow-sm">
+                        <i class="fas fa-check text-3xl text-brand-green"></i>
+                    </div>
+                    <h3 class="font-bold text-xl text-brand-green mb-1">Accepted</h3>
+                    <p class="text-sm text-emerald-700 font-medium">All test cases passed successfully.</p>
+                    <div class="mt-4 flex gap-4 text-xs font-mono text-gray-500">
+                        <span>Runtime: 42ms</span>
+                        <span>Memory: 38.4 MB</span>
+                    </div>
+                `;
+                
+                renderProblemsTable(); // Update checks
+            }, 1500);
+        }
+
+        // --- Quiz Logic ---
+        function openQuiz(id) {
+            const quiz = platformData.find(p => p.id === id);
+            if(!quiz) return;
+            
+            currentQuizId = id;
+            document.getElementById('quiz-title').innerText = quiz.title;
+            document.getElementById('quiz-question').innerText = quiz.question;
+            
+            const optionsContainer = document.getElementById('quiz-options');
+            optionsContainer.innerHTML = '';
+            
+            quiz.options.forEach((opt, index) => {
+                optionsContainer.innerHTML += `
+                    <label class="flex items-center p-4 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors group">
+                        <input type="radio" name="quiz_option" value="${index}" class="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300">
+                        <span class="ml-3 text-gray-800 font-medium group-hover:text-blue-700">${opt}</span>
+                    </label>
+                `;
+            });
+
+            // Reset UI
+            document.getElementById('quiz-feedback').classList.add('hidden');
+            document.getElementById('quiz-submit-btn').style.display = 'block';
+
+            navigate('quiz');
+        }
+
+        function submitQuiz() {
+            const selected = document.querySelector('input[name="quiz_option"]:checked');
+            const feedback = document.getElementById('quiz-feedback');
+            
+            if(!selected) {
+                // simple inline alert alternative
+                feedback.classList.remove('hidden', 'text-green-600', 'text-red-600');
+                feedback.classList.add('text-orange-500');
+                feedback.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Please select an option first.';
+                return;
+            }
+
+            const quiz = platformData.find(p => p.id === currentQuizId);
+            const answerIndex = parseInt(selected.value);
+            
+            feedback.classList.remove('hidden', 'text-orange-500');
+            
+            if(answerIndex === quiz.correctIndex) {
+                feedback.classList.remove('text-red-600');
+                feedback.classList.add('text-green-600');
+                feedback.innerHTML = '<i class="fas fa-check-circle text-lg mr-1 align-middle"></i> Correct! Points awarded.';
+                
+                if(!quiz.solved) {
+                    quiz.solved = true;
+                    solvedCount++;
+                    localStorage.setItem('codearena_solved', solvedCount);
+                    renderProblemsTable();
+                }
+                document.getElementById('quiz-submit-btn').style.display = 'none';
+            } else {
+                feedback.classList.remove('text-green-600');
+                feedback.classList.add('text-red-600');
+                feedback.innerHTML = '<i class="fas fa-times-circle text-lg mr-1 align-middle"></i> Incorrect. Try again!';
+            }
+        }
+
+        // --- Contest Logic ---
+        function startContest() {
+            // Reset state
+            currentContestQ = 0;
+            contestRemainingSeconds = 15 * 60;
+            userContestAnswers = new Array(10).fill(null);
+            
+            // Hide main nav to prevent leaving easily
+            document.getElementById('main-nav').classList.add('hidden');
+            
+            navigate('active-contest');
+            updateContestNavUI();
+            renderContestQuestion();
+            
+            // Start timer
+            clearInterval(contestTimerInterval);
+            updateTimerDisplay();
+            contestTimerInterval = setInterval(() => {
+                contestRemainingSeconds--;
+                updateTimerDisplay();
+                
+                if(contestRemainingSeconds <= 0) {
+                    clearInterval(contestTimerInterval);
+                    submitContest();
+                }
+            }, 1000);
+        }
+
+        function updateTimerDisplay() {
+            const mins = Math.floor(contestRemainingSeconds / 60);
+            const secs = contestRemainingSeconds % 60;
+            document.getElementById('contest-timer').innerText = 
+                `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            
+            // Turn red if less than 1 minute
+            if(contestRemainingSeconds < 60) {
+                document.getElementById('contest-timer').classList.add('text-red-500');
+            }
+        }
+
+        function renderContestQuestion() {
+            const qData = contestQuestions[currentContestQ];
+            document.getElementById('contest-q-badge').innerText = `Question ${currentContestQ + 1} of 10`;
+            document.getElementById('contest-q-text').innerText = qData.q;
+            
+            const optionsContainer = document.getElementById('contest-q-options');
+            optionsContainer.innerHTML = '';
+            
+            qData.options.forEach((opt, index) => {
+                const isSelected = userContestAnswers[currentContestQ] === index;
+                optionsContainer.innerHTML += `
+                    <label class="flex items-center p-4 border ${isSelected ? 'border-brand-green bg-emerald-50' : 'border-gray-200'} rounded-lg cursor-pointer hover:bg-gray-50 transition-all group" onclick="selectContestAnswer(${currentContestQ}, ${index})">
+                        <div class="w-5 h-5 rounded-full border-2 flex items-center justify-center mr-3 ${isSelected ? 'border-brand-green' : 'border-gray-300'}">
+                            ${isSelected ? '<div class="w-2.5 h-2.5 bg-brand-green rounded-full"></div>' : ''}
+                        </div>
+                        <span class="${isSelected ? 'text-brand-green font-bold' : 'text-gray-700 font-medium'} text-lg">${opt}</span>
+                    </label>
+                `;
+            });
+
+            // Update button states
+            document.getElementById('btn-contest-prev').disabled = currentContestQ === 0;
+            document.getElementById('btn-contest-next').disabled = currentContestQ === 9;
+            
+            updateContestNavUI();
+        }
+
+        function selectContestAnswer(qIndex, aIndex) {
+            userContestAnswers[qIndex] = aIndex;
+            renderContestQuestion(); // re-render to update UI selection
+        }
+
+        function changeContestQuestion(dir) {
+            currentContestQ += dir;
+            if(currentContestQ < 0) currentContestQ = 0;
+            if(currentContestQ > 9) currentContestQ = 9;
+            renderContestQuestion();
+        }
+
+        function updateContestNavUI() {
+            const grid = document.getElementById('contest-nav-grid');
+            grid.innerHTML = '';
+            
+            for(let i = 0; i < 10; i++) {
+                let btnClass = "w-10 h-10 rounded font-bold text-sm flex items-center justify-center transition-colors border ";
+                
+                if (i === currentContestQ) {
+                    btnClass += "bg-blue-500 text-white border-blue-600 shadow-md ring-2 ring-blue-200 ring-offset-1"; // Current
+                } else if (userContestAnswers[i] !== null) {
+                    btnClass += "bg-brand-green text-white border-emerald-600"; // Answered
+                } else {
+                    btnClass += "bg-white text-gray-500 border-gray-300 hover:bg-gray-100"; // Unanswered
+                }
+
+                grid.innerHTML += `<button onclick="currentContestQ=${i}; renderContestQuestion();" class="${btnClass}">${i + 1}</button>`;
+            }
+        }
+
+        function submitContest() {
+            clearInterval(contestTimerInterval);
+            
+            // Calculate Score
+            let correct = 0;
+            userContestAnswers.forEach((ans, index) => {
+                if(ans === contestQuestions[index].answer) {
+                    correct++;
+                }
+            });
+            
+            const timeTakenSecs = (15 * 60) - contestRemainingSeconds;
+            const mins = Math.floor(timeTakenSecs / 60);
+            const secs = timeTakenSecs % 60;
+            
+            // Update Result UI
+            document.getElementById('result-score').innerText = `${correct * 10}/100`;
+            document.getElementById('result-accuracy').innerText = `${(correct / 10) * 100}%`;
+            document.getElementById('result-time').innerText = `${mins}m ${secs}s`;
+            
+            // Update global dashboard stats mock
+            document.getElementById('lb-rating').innerText = 1245; 
+
+            navigate('contest-result');
+        }
+        
+        function returnFromContest() {
+            document.getElementById('main-nav').classList.remove('hidden');
+            navigate('dashboard');
+        }
+
+        // --- App Initialization ---
+        function initApp() {
+            if (currentUser) {
+                // Restore user interface
+                document.getElementById('nav-username').innerText = currentUser;
+                document.getElementById('dash-username').innerText = currentUser;
+                document.getElementById('lb-username').innerText = currentUser;
+                
+                document.getElementById('main-nav').classList.remove('hidden');
+                renderProblemsTable();
+                navigate('dashboard');
+            } else {
+                // No user found, go to login
+                navigate('login');
+            }
+        }
+
+        // Start the application
+        initApp();
+    </script>
+</body>
+</html>
